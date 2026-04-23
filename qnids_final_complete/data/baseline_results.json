@@ -1,0 +1,26 @@
+[
+  {
+    "model": "Random Forest \u2014 41 features",
+    "accuracy": 77.04,
+    "precision": 96.63,
+    "recall": 61.83,
+    "f1": 75.41,
+    "fpr": 2.85,
+    "tp": 7935,
+    "fp": 277,
+    "tn": 9434,
+    "fn": 4898
+  },
+  {
+    "model": "Decision Tree \u2014 41 features",
+    "accuracy": 77.22,
+    "precision": 96.52,
+    "recall": 62.23,
+    "f1": 75.67,
+    "fpr": 2.97,
+    "tp": 7986,
+    "fp": 288,
+    "tn": 9423,
+    "fn": 4847
+  }
+]

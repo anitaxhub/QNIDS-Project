@@ -1,0 +1,26 @@
+[
+  {
+    "model": "Random Forest \u2014 UNSW-NB15",
+    "accuracy": 90.06,
+    "precision": 98.79,
+    "recall": 86.45,
+    "f1": 92.21,
+    "fpr": 2.25,
+    "tp": 103166,
+    "fp": 1259,
+    "tn": 54741,
+    "fn": 16175
+  },
+  {
+    "model": "Decision Tree \u2014 UNSW-NB15",
+    "accuracy": 89.79,
+    "precision": 98.67,
+    "recall": 86.16,
+    "f1": 91.99,
+    "fpr": 2.47,
+    "tp": 102825,
+    "fp": 1381,
+    "tn": 54619,
+    "fn": 16516
+  }
+]

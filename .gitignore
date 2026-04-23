@@ -1,0 +1,25 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Large model files
+*.pkl
+*.npy
+
+# Large data files
+data/NSL-KDD/
+qnids_final_complete/models/
+qnids_final_complete/data/
+
+# OS files
+.DS_Store
+Thumbs.db
+Thumbs.db:encryptable
+
+# VS Code
+.vscode/
+
+# Zip files
+*.zip
+*.arff

@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<!-- saved from url=(0048)file:///D:/QNIDS-Project/QNIDS_Todo_Tracker.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QNIDS Project Tracker</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root {
+    --bg: #0a0f1a;
+    --surface: #111827;
+    --surface2: #1a2436;
+    --border: #1e3048;
+    --accent: #3b82f6;
+    --accent2: #60a5fa;
+    --green: #10b981;
+    --orange: #f59e0b;
+    --red: #ef4444;
+    --purple: #8b5cf6;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --pa: #3b82f6;
+    --pb: #8b5cf6;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    font-family: 'Sora', sans-serif;
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0 0 60px;
+  }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, #0f172a, #1e1b4b);
+    border-bottom: 1px solid var(--border);
+    padding: 24px 32px;
+    position: sticky; top: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    backdrop-filter: blur(10px);
+  }
+  .header-left h1 {
+    font-size: 20px; font-weight: 700; color: var(--accent2);
+    letter-spacing: -0.3px;
+  }
+  .header-left p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  .overall-progress {
+    display: flex; align-items: center; gap: 16px;
+  }
+  .progress-ring-wrap { position: relative; width: 56px; height: 56px; }
+  .progress-ring-wrap svg { transform: rotate(-90deg); }
+  .ring-bg { fill: none; stroke: var(--border); stroke-width: 5; }
+  .ring-fill { fill: none; stroke: var(--green); stroke-width: 5;
+    stroke-linecap: round; transition: stroke-dashoffset 0.5s ease; }
+  .ring-text {
+    position: absolute; inset: 0; display: flex;
+    align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; color: var(--green);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .progress-info { text-align: right; }
+  .progress-info .big { font-size: 22px; font-weight: 700; color: var(--text);
+    font-family: 'JetBrains Mono', monospace; }
+  .progress-info .small { font-size: 11px; color: var(--muted); }
+
+  /* Main layout */
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px 24px 0; }
+
+  /* Person tabs */
+  .person-tabs {
+    display: flex; gap: 8px; margin-bottom: 24px;
+  }
+  .ptab {
+    padding: 8px 20px; border-radius: 8px; cursor: pointer;
+    font-size: 13px; font-weight: 600; letter-spacing: 0.3px;
+    border: 1.5px solid transparent; transition: all 0.2s;
+    color: var(--muted); background: var(--surface);
+    border-color: var(--border);
+  }
+  .ptab.active-a { background: rgba(59,130,246,0.15); color: var(--pa); border-color: var(--pa); }
+  .ptab.active-b { background: rgba(139,92,246,0.15); color: var(--pb); border-color: var(--pb); }
+  .ptab.active-both { background: rgba(16,185,129,0.1); color: var(--green); border-color: var(--green); }
+
+  /* Week block */
+  .week-block {
+    margin-bottom: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .week-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px;
+    background: var(--surface2);
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .week-header:hover { background: #1f2f44; }
+  .week-left { display: flex; align-items: center; gap: 12px; }
+  .week-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 600;
+    padding: 3px 8px; border-radius: 5px;
+    background: rgba(59,130,246,0.15); color: var(--accent2);
+    letter-spacing: 1px;
+  }
+  .week-num.m2 { background: rgba(139,92,246,0.15); color: var(--pb); }
+  .week-title { font-size: 14px; font-weight: 600; }
+  .week-dates { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+  .week-right { display: flex; align-items: center; gap: 12px; }
+  .week-progress-bar {
+    width: 120px; height: 6px;
+    background: var(--border); border-radius: 3px; overflow: hidden;
+  }
+  .week-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+  .wbf-m1 { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+  .wbf-m2 { background: linear-gradient(90deg, var(--purple), #a78bfa); }
+  .week-pct {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; font-weight: 600; color: var(--text); min-width: 36px; text-align: right;
+  }
+  .chevron { font-size: 14px; color: var(--muted); transition: transform 0.2s; }
+  .week-block.collapsed .chevron { transform: rotate(-90deg); }
+
+  /* Tasks */
+  .tasks-wrap { padding: 12px 16px; display: flex; flex-direction: column; gap: 2px; }
+  .week-block.collapsed .tasks-wrap { display: none; }
+
+  /* Day group */
+  .day-group { margin-bottom: 8px; }
+  .day-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+    color: var(--muted); text-transform: uppercase;
+    padding: 6px 4px 4px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    margin-bottom: 4px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .person-chip {
+    padding: 1px 7px; border-radius: 10px;
+    font-size: 9px; font-weight: 700; letter-spacing: 0.5px;
+  }
+  .chip-a { background: rgba(59,130,246,0.2); color: var(--pa); }
+  .chip-b { background: rgba(139,92,246,0.2); color: var(--pb); }
+  .chip-both { background: rgba(16,185,129,0.15); color: var(--green); }
+
+  /* Task item */
+  .task-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 7px 8px; border-radius: 8px;
+    cursor: pointer; transition: all 0.15s;
+    border: 1px solid transparent;
+  }
+  .task-item:hover { background: rgba(255,255,255,0.03); border-color: var(--border); }
+  .task-item.done { opacity: 0.5; }
+
+  .task-checkbox {
+    width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0; margin-top: 1px;
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; font-size: 11px;
+    background: transparent;
+  }
+  .task-item.done .task-checkbox {
+    background: var(--green); border-color: var(--green); color: #000;
+  }
+  .task-item[data-person="A"].done .task-checkbox { background: var(--pa); border-color: var(--pa); }
+  .task-item[data-person="B"].done .task-checkbox { background: var(--pb); border-color: var(--pb); }
+
+  .task-text {
+    font-size: 13px; line-height: 1.5; color: var(--text);
+    transition: all 0.2s;
+  }
+  .task-item.done .task-text { text-decoration: line-through; color: var(--muted); }
+
+  .task-tag {
+    margin-left: auto; flex-shrink: 0;
+    font-size: 9px; font-weight: 600; padding: 2px 7px; border-radius: 8px;
+    letter-spacing: 0.5px; align-self: center;
+  }
+  .tag-easy { background: rgba(16,185,129,0.15); color: var(--green); }
+  .tag-medium { background: rgba(245,158,11,0.15); color: var(--orange); }
+  .tag-hard { background: rgba(239,68,68,0.15); color: var(--red); }
+
+  /* Month divider */
+  .month-divider {
+    text-align: center; padding: 20px 0 16px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .month-divider::before, .month-divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+  .month-divider span {
+    font-size: 11px; font-weight: 700; letter-spacing: 2px;
+    color: var(--muted); text-transform: uppercase;
+    padding: 4px 14px; border: 1px solid var(--border);
+    border-radius: 20px; background: var(--surface);
+  }
+
+  /* Bottom stats bar */
+  .stats-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 10px 32px;
+    display: flex; align-items: center; gap: 28px;
+    z-index: 100;
+  }
+  .stat-item { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+  .stat-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .stat-val { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+  .reset-btn {
+    margin-left: auto; padding: 5px 14px; border-radius: 6px;
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted); font-size: 11px; font-family: 'Sora', sans-serif;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .reset-btn:hover { border-color: var(--red); color: var(--red); }
+
+  /* Filter shown/hidden */
+  .task-item.hidden-filter { display: none; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>⬡ QNIDS Project Tracker</h1>
+    <p>2 Months · 2 Persons · Daily Todo</p>
+  </div>
+  <div class="overall-progress">
+    <div class="progress-ring-wrap">
+      <svg width="56" height="56" viewBox="0 0 56 56">
+        <circle class="ring-bg" cx="28" cy="28" r="23"></circle>
+        <circle class="ring-fill" id="mainRing" cx="28" cy="28" r="23" stroke-dasharray="144.5" stroke-dashoffset="144.5" style="stroke-dashoffset: 130.868;"></circle>
+      </svg>
+      <div class="ring-text" id="ringPct">9%</div>
+    </div>
+    <div class="progress-info">
+      <div class="big" id="mainCount">10/106</div>
+      <div class="small">tasks complete</div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Person Filter -->
+  <div class="person-tabs">
+    <div class="ptab active-both" onclick="filterPerson(&#39;both&#39;, this)">👥 Dono</div>
+    <div class="ptab" onclick="filterPerson(&#39;A&#39;, this)">🔵 Person A — Backend/ML</div>
+    <div class="ptab" onclick="filterPerson(&#39;B&#39;, this)">🟣 Person B — GUI/Frontend</div>
+  </div>
+
+  <!-- MONTH 1 -->
+  <div class="month-divider"><span>Month 1 — Data, ML, QPSO, Anomaly</span></div>
+
+  <!-- WEEK 1 -->
+  <div class="week-block" id="week1">
+    <div class="week-header" onclick="toggleWeek(&#39;week1&#39;)">
+      <div class="week-left">
+        <span class="week-num">WEEK 1</span>
+        <div>
+          <div class="week-title">Setup, Dataset &amp; Basic GUI</div>
+          <div class="week-dates">Day 1 – 7</div>
+        </div>
+      </div>
+      <div class="week-right">
+        <div class="week-progress-bar"><div class="week-bar-fill wbf-m1" id="bar-week1" style="width: 11%;"></div></div>
+        <div class="week-pct" id="pct-week1">11%</div>
+        <div class="chevron">▾</div>
+      </div>
+    </div>
+    <div class="tasks-wrap">
+
+      <div class="day-group">
+        <div class="day-label">Day 1–2 <span class="person-chip chip-a">Person A</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Python environment setup karo — VS Code install, virtual environment banao</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Libraries install karo: scikit-learn, pandas, numpy, deap, pyswarm, scapy, matplotlib, PyQt5</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">NSL-KDD dataset download karo from unb.ca/cic/datasets/nsl.html</div><span class="task-tag tag-easy">Easy</span></div>
+      </div>
+
+      <div class="day-group">
+        <div class="day-label">Day 1–2 <span class="person-chip chip-b">Person B</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">PyQt5 install karo aur basic "Hello World" window banao — sirf test ke liye</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">GitHub repository banao — dono ka access do, README file likho</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">GUI ka sketch banao paper pe — dashboard layout, sidebar, table, metric cards</div><span class="task-tag tag-easy">Easy</span></div>
+      </div>
+
+      <div class="day-group">
+        <div class="day-label">Day 3–4 <span class="person-chip chip-a">Person A</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">NSL-KDD dataset explore karo — rows count karo, columns dekho, attack types list karo</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Null values aur missing data check karo — pandas df.isnull().sum()</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Attack type distribution dekho — kitne normal, kitne DoS, DDoS etc — bar chart banao</div><span class="task-tag tag-easy">Easy</span></div>
+      </div>
+
+      <div class="day-group">
+        <div class="day-label">Day 3–4 <span class="person-chip chip-b">Person B</span></div>
+        <div class="task-item done" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">PyQt5 mein main window banao — dark theme set karo (#0a0f1a background)</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item done" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Layout structure: left sidebar + main content area + right panel — placeholder boxes</div><span class="task-tag tag-medium">Medium</span></div>
+      </div>
+
+      <div class="day-group">
+        <div class="day-label">Day 5–7 <span class="person-chip chip-a">Person A</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Label encoding karo — attack types ko numbers mein convert karo (LabelEncoder)</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Min-Max Normalization apply karo — sari numerical features pe (MinMaxScaler)</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">80/20 stratified train-test split karo — train_test_split(stratify=y)</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Processed data CSV mein save karo — train.csv aur test.csv alag alag</div><span class="task-tag tag-easy">Easy</span></div>
+      </div>
+
+      <div class="day-group">
+        <div class="day-label">Day 5–7 <span class="person-chip chip-b">Person B</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">4 metric cards banao GUI top pe — Accuracy, FPR, Attacks Detected, Packets Analyzed</div><span class="task-tag tag-medium">Medium</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Live feed table banao — columns: Time, Source IP, Attack Type, Verdict, Confidence</div><span class="task-tag tag-medium">Medium</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Sab GitHub pe push karo — commit message: "Week 1 complete"</div><span class="task-tag tag-easy">Easy</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- WEEK 2 -->
+  <div class="week-block" id="week2">
+    <div class="week-header" onclick="toggleWeek(&#39;week2&#39;)">
+      <div class="week-left">
+        <span class="week-num">WEEK 2</span>
+        <div>
+          <div class="week-title">Classical ML Baseline + GUI Tables</div>
+          <div class="week-dates">Day 8 – 14</div>
+        </div>
+      </div>
+      <div class="week-right">
+        <div class="week-progress-bar"><div class="week-bar-fill wbf-m1" id="bar-week2" style="width: 36%;"></div></div>
+        <div class="week-pct" id="pct-week2">36%</div>
+        <div class="chevron">▾</div>
+      </div>
+    </div>
+    <div class="tasks-wrap">
+
+      <div class="day-group">
+        <div class="day-label">Day 8–10 <span class="person-chip chip-a">Person A</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Random Forest train karo — sari 41 features pe — n_estimators=100</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">RF accuracy, precision, recall, F1, FPR calculate karo — classification_report use karo</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Decision Tree train karo — criterion='gini', max_depth=10</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">DT ke bhi results nikalo — same metrics</div><span class="task-tag tag-easy">Easy</span></div>
+      </div>
+
+      <div class="day-group">
+        <div class="day-label">Day 8–10 <span class="person-chip chip-b">Person B</span></div>
+        <div class="task-item done" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Table mein dummy rows add karo manually — test karo ke rows sahi dikh rahi hain</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item done" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Row colors set karo — Normal = green, Attack = red, Unknown = orange</div><span class="task-tag tag-medium">Medium</span></div>
+      </div>
+
+      <div class="day-group">
+        <div class="day-label">Day 11–12 <span class="person-chip chip-a">Person A</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Confusion matrix banao — RF ke liye — seaborn heatmap</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Dono models results ek results_baseline.txt file mein save karo</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Person B ko results table de do — GUI mein dikhane ke liye</div><span class="task-tag tag-easy">Easy</span></div>
+      </div>
+
+      <div class="day-group">
+        <div class="day-label">Day 11–12 <span class="person-chip chip-b">Person B</span></div>
+        <div class="task-item done" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Sidebar mein navigation items add karo — Dashboard, Live Detection, QPSO Analysis, Reports</div><span class="task-tag tag-medium">Medium</span></div>
+        <div class="task-item done" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Metric cards mein Person A ke baseline numbers daalo — static for now</div><span class="task-tag tag-easy">Easy</span></div>
+      </div>
+
+      <div class="day-group">
+        <div class="day-label">Day 13–14 <span class="person-chip chip-both">Dono</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Person A: Trained models pickle file mein save karo — rf_model.pkl, dt_model.pkl</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item done" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Person B: GUI screenshot lo — GitHub pe push karo</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Dono milke: Week 2 review karo — kya kya bana, kya bacha</div><span class="task-tag tag-easy">Easy</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- WEEK 3 -->
+  <div class="week-block" id="week3">
+    <div class="week-header" onclick="toggleWeek(&#39;week3&#39;)">
+      <div class="week-left">
+        <span class="week-num">WEEK 3</span>
+        <div>
+          <div class="week-title">QPSO Implementation + Live/Demo Toggle</div>
+          <div class="week-dates">Day 15 – 21</div>
+        </div>
+      </div>
+      <div class="week-right">
+        <div class="week-progress-bar"><div class="week-bar-fill wbf-m1" id="bar-week3" style="width: 17%;"></div></div>
+        <div class="week-pct" id="pct-week3">17%</div>
+        <div class="chevron">▾</div>
+      </div>
+    </div>
+    <div class="tasks-wrap">
+
+      <div class="day-group">
+        <div class="day-label">Day 15–17 <span class="person-chip chip-a">Person A</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">PSO ka concept samjho — YouTube: "PSO feature selection python tutorial" dekho (2 din)</div><span class="task-tag tag-medium">Medium</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">DEAP library install aur basic example run karo — documentation padho</div><span class="task-tag tag-medium">Medium</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Basic PSO feature selection likho — binary representation (1=feature selected, 0=not)</div><span class="task-tag tag-hard">Hard</span></div>
+      </div>
+
+      <div class="day-group">
+        <div class="day-label">Day 15–17 <span class="person-chip chip-b">Person B</span></div>
+        <div class="task-item done" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Scapy install karo — basic packet capture test karo — print karo console pe</div><span class="task-tag tag-medium">Medium</span></div>
+        <div class="task-item done" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Live Mode toggle button banao GUI mein — blue color, top right mein</div><span class="task-tag tag-medium">Medium</span></div>
+        <div class="task-item done" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Demo Mode button banao — red color — CSV file select dialog khule</div><span class="task-tag tag-medium">Medium</span></div>
+      </div>
+
+      <div class="day-group">
+        <div class="day-label">Day 18–19 <span class="person-chip chip-a">Person A</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">QPSO mein quantum position update formula add karo — classical PSO se alag hai yeh part</div><span class="task-tag tag-hard">Hard</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Fitness function define karo — RF accuracy as fitness — zyada accuracy = better particle</div><span class="task-tag tag-medium">Medium</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">QPSO run karo — 41 features mein se best ~19 select karo — selected features print karo</div><span class="task-tag tag-hard">Hard</span></div>
+      </div>
+
+      <div class="day-group">
+        <div class="day-label">Day 18–19 <span class="person-chip chip-b">Person B</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Live Mode ON karne pe: real packets table mein aana shuru hon — IP, Protocol, Size sirf</div><span class="task-tag tag-medium">Medium</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Demo Mode: CSV file load hone ke baad row by row 0.5sec mein table update karo</div><span class="task-tag tag-medium">Medium</span></div>
+      </div>
+
+      <div class="day-group">
+        <div class="day-label">Day 20–21 <span class="person-chip chip-a">Person A</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">QPSO selected 19 features pe RF dobara train karo</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Compare karo — 41 features RF vs 19 features RF — accuracy better hai?</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Selected 19 feature names list save karo — qpso_features.txt mein</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">New model save karo — rf_qpso_model.pkl</div><span class="task-tag tag-easy">Easy</span></div>
+      </div>
+
+      <div class="day-group">
+        <div class="day-label">Day 20–21 <span class="person-chip chip-b">Person B</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Demo Mode mein Pause/Resume button add karo</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Speed slider add karo — Slow / Normal / Fast simulation speed</div><span class="task-tag tag-medium">Medium</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">GitHub push — commit: "Week 3 QPSO + toggle complete"</div><span class="task-tag tag-easy">Easy</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- WEEK 4 -->
+  <div class="week-block" id="week4">
+    <div class="week-header" onclick="toggleWeek(&#39;week4&#39;)">
+      <div class="week-left">
+        <span class="week-num">WEEK 4</span>
+        <div>
+          <div class="week-title">Anomaly Detection + Model Connect</div>
+          <div class="week-dates">Day 22 – 28</div>
+        </div>
+      </div>
+      <div class="week-right">
+        <div class="week-progress-bar"><div class="week-bar-fill wbf-m1" id="bar-week4" style="width:0%"></div></div>
+        <div class="week-pct" id="pct-week4">0%</div>
+        <div class="chevron">▾</div>
+      </div>
+    </div>
+    <div class="tasks-wrap">
+
+      <div class="day-group">
+        <div class="day-label">Day 22–23 <span class="person-chip chip-a">Person A</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Isolation Forest samjho — sklearn documentation padho — 10 minute kaafi hai</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Sirf normal traffic pe Isolation Forest train karo — contamination=0.05</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Model save karo — anomaly_model.pkl</div><span class="task-tag tag-easy">Easy</span></div>
+      </div>
+
+      <div class="day-group">
+        <div class="day-label">Day 22–23 <span class="person-chip chip-b">Person B</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Alert popup banao — jab Unknown Threat aaye — orange warning dialog</div><span class="task-tag tag-medium">Medium</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Sound alert add karo — system beep ya custom .wav file — attack pe bajey</div><span class="task-tag tag-easy">Easy</span></div>
+      </div>
+
+      <div class="day-group">
+        <div class="day-label">Day 24–25 <span class="person-chip chip-a">Person A</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Anomaly detector test karo — known attacks pe: detection rate nikalo</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Normal traffic pe test karo — false positive rate nikalo</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Unknown attack test: U2R training se hatao — phir test karo — kya pakda?</div><span class="task-tag tag-medium">Medium</span></div>
+      </div>
+
+      <div class="day-group">
+        <div class="day-label">Day 24–25 <span class="person-chip chip-b">Person B</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Matplotlib chart embed karo PyQt5 mein — attack distribution pie chart</div><span class="task-tag tag-medium">Medium</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Right panel mein feature importance bars show karo — QPSO selected 19 features</div><span class="task-tag tag-medium">Medium</span></div>
+      </div>
+
+      <div class="day-group">
+        <div class="day-label">Day 26–28 <span class="person-chip chip-both">Dono Milke</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Person A: QPSO+RF + Anomaly detection ko ek predict() function mein combine karo</div><span class="task-tag tag-medium">Medium</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Person B: Demo Mode mein Person A ka combined model connect karo — real predictions!</div><span class="task-tag tag-hard">Hard</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Dono milke: End to end test karo — CSV load → predict → GUI mein show</div><span class="task-tag tag-medium">Medium</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Metric cards ab real numbers show karen — dummy data hata do</div><span class="task-tag tag-medium">Medium</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">GitHub push — commit: "Month 1 Complete 🎉"</div><span class="task-tag tag-easy">Easy</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MONTH 2 -->
+  <div class="month-divider"><span>Month 2 — Integration, Polish, Testing, Presentation</span></div>
+
+  <!-- WEEK 5 -->
+  <div class="week-block" id="week5">
+    <div class="week-header" onclick="toggleWeek(&#39;week5&#39;)">
+      <div class="week-left">
+        <span class="week-num m2">WEEK 5</span>
+        <div>
+          <div class="week-title">Full Integration + UNSW-NB15</div>
+          <div class="week-dates">Day 29 – 35</div>
+        </div>
+      </div>
+      <div class="week-right">
+        <div class="week-progress-bar"><div class="week-bar-fill wbf-m2" id="bar-week5" style="width:0%"></div></div>
+        <div class="week-pct" id="pct-week5">0%</div>
+        <div class="chevron">▾</div>
+      </div>
+    </div>
+    <div class="tasks-wrap">
+
+      <div class="day-group">
+        <div class="day-label">Day 29–31 <span class="person-chip chip-a">Person A</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">UNSW-NB15 dataset download karo — research.unsw.edu.au se</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">UNSW-NB15 pe same preprocessing karo — NSL-KDD wali pipeline reuse karo</div><span class="task-tag tag-medium">Medium</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">QPSO+RF model UNSW-NB15 pe bhi train karo — results save karo</div><span class="task-tag tag-medium">Medium</span></div>
+      </div>
+
+      <div class="day-group">
+        <div class="day-label">Day 29–31 <span class="person-chip chip-b">Person B</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">GUI mein dataset selector add karo — NSL-KDD / UNSW-NB15 dropdown</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Live Mode properly connect karo Scapy se — basic packet info table mein</div><span class="task-tag tag-hard">Hard</span></div>
+      </div>
+
+      <div class="day-group">
+        <div class="day-label">Day 32–35 <span class="person-chip chip-both">Dono</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Person A: Dono datasets ke final results ek table mein likhو — comparison ready karo thesis ke liye</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Person B: Dataset switch hone pe GUI automatically update ho — models reload hon</div><span class="task-tag tag-medium">Medium</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Dono milke: Full integration test karo — dono datasets pe demo chalao</div><span class="task-tag tag-medium">Medium</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- WEEK 6 -->
+  <div class="week-block" id="week6">
+    <div class="week-header" onclick="toggleWeek(&#39;week6&#39;)">
+      <div class="week-left">
+        <span class="week-num m2">WEEK 6</span>
+        <div>
+          <div class="week-title">Polish + Export + Final Charts</div>
+          <div class="week-dates">Day 36 – 42</div>
+        </div>
+      </div>
+      <div class="week-right">
+        <div class="week-progress-bar"><div class="week-bar-fill wbf-m2" id="bar-week6" style="width:0%"></div></div>
+        <div class="week-pct" id="pct-week6">0%</div>
+        <div class="chevron">▾</div>
+      </div>
+    </div>
+    <div class="tasks-wrap">
+
+      <div class="day-group">
+        <div class="day-label">Day 36–38 <span class="person-chip chip-a">Person A</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Final evaluation table tayyar karo: Classical RF vs QPSO+RF — Accuracy, FPR, F1, Precision, Recall</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Confusion matrix plots save karo — PNG format — thesis ke liye</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Feature importance chart banao — QPSO selected 19 features ka bar chart</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">QPSO convergence curve plot banao — iterations vs fitness — thesis mein lagegi</div><span class="task-tag tag-medium">Medium</span></div>
+      </div>
+
+      <div class="day-group">
+        <div class="day-label">Day 36–38 <span class="person-chip chip-b">Person B</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">PDF Export button implement karo — fpdf ya reportlab library use karo</div><span class="task-tag tag-medium">Medium</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">CSV Export button implement karo — current session ka data export ho</div><span class="task-tag tag-easy">Easy</span></div>
+      </div>
+
+      <div class="day-group">
+        <div class="day-label">Day 39–42 <span class="person-chip chip-b">Person B</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">GUI fonts, colors, spacing consistent karo — poori app ek jaisi dikh'ni chahiye</div><span class="task-tag tag-medium">Medium</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Loading screen add karo — app open hone pe models load hote waqt</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">About section add karo — project name, team names, supervisor, session</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">App icon (.ico file) banao aur set karo</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Person A: Sab charts aur plots GUI mein embed karo — static ya interactive</div><span class="task-tag tag-medium">Medium</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- WEEK 7 -->
+  <div class="week-block" id="week7">
+    <div class="week-header" onclick="toggleWeek(&#39;week7&#39;)">
+      <div class="week-left">
+        <span class="week-num m2">WEEK 7</span>
+        <div>
+          <div class="week-title">Testing + Bug Fixing + Documentation</div>
+          <div class="week-dates">Day 43 – 49</div>
+        </div>
+      </div>
+      <div class="week-right">
+        <div class="week-progress-bar"><div class="week-bar-fill wbf-m2" id="bar-week7" style="width:0%"></div></div>
+        <div class="week-pct" id="pct-week7">0%</div>
+        <div class="chevron">▾</div>
+      </div>
+    </div>
+    <div class="tasks-wrap">
+
+      <div class="day-group">
+        <div class="day-label">Day 43–45 <span class="person-chip chip-a">Person A</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Edge cases test karo: empty CSV file load karo — crash nahi hona chahiye</div><span class="task-tag tag-medium">Medium</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Wrong format file load karo — error message aana chahiye gracefully</div><span class="task-tag tag-medium">Medium</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Code mein comments add karo — har function ke upar explain karo kya karta hai</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">requirements.txt banao — pip freeze &gt; requirements.txt</div><span class="task-tag tag-easy">Easy</span></div>
+      </div>
+
+      <div class="day-group">
+        <div class="day-label">Day 43–45 <span class="person-chip chip-b">Person B</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Dost ke laptop pe install karke test karo — sab kuch kaam karta hai?</div><span class="task-tag tag-medium">Medium</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Koi bhi crash ya freeze note karo — list banao aur fix karo</div><span class="task-tag tag-medium">Medium</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">GUI responsive check karo — window resize karne pe elements sahi rahein</div><span class="task-tag tag-easy">Easy</span></div>
+      </div>
+
+      <div class="day-group">
+        <div class="day-label">Day 46–49 <span class="person-chip chip-both">Dono</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Person B: User guide banao — simple PDF — screenshots ke saath install aur use kaise karein</div><span class="task-tag tag-medium">Medium</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Person A: GitHub README update karo — project description, screenshots, install instructions</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Demo video record karo — 2-3 minutes — screen recording — app ka poora demo</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Dono milke: Final bug list banao — sab fix karo — koi bhi known issue na rahe</div><span class="task-tag tag-medium">Medium</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- WEEK 8 -->
+  <div class="week-block" id="week8">
+    <div class="week-header" onclick="toggleWeek(&#39;week8&#39;)">
+      <div class="week-left">
+        <span class="week-num m2">WEEK 8</span>
+        <div>
+          <div class="week-title">Final Prep + Presentation + Practice</div>
+          <div class="week-dates">Day 50 – 56</div>
+        </div>
+      </div>
+      <div class="week-right">
+        <div class="week-progress-bar"><div class="week-bar-fill wbf-m2" id="bar-week8" style="width:0%"></div></div>
+        <div class="week-pct" id="pct-week8">0%</div>
+        <div class="chevron">▾</div>
+      </div>
+    </div>
+    <div class="tasks-wrap">
+
+      <div class="day-group">
+        <div class="day-label">Day 50–52 <span class="person-chip chip-a">Person A</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Thesis/report ke liye results organize karo — tables, graphs, accuracy numbers sab ek jagah</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Presentation slides mein actual results update karo — placeholder numbers hata do</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Defense ke expected questions ke answers dobara padho aur yaad karo</div><span class="task-tag tag-easy">Easy</span></div>
+      </div>
+
+      <div class="day-group">
+        <div class="day-label">Day 50–52 <span class="person-chip chip-b">Person B</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Final GUI screenshots lo — high quality — presentation mein use honge</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Poori application cleanly package karo — ek folder mein — models + code + data sab</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Presentation slides mein GUI screenshots add karo</div><span class="task-tag tag-easy">Easy</span></div>
+      </div>
+
+      <div class="day-group">
+        <div class="day-label">Day 53–56 <span class="person-chip chip-both">Dono Milke — Final</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Live demo practice karo — poora flow 3 baar karo: open → live mode → demo mode → unknown alert → export</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Backup plan ready karo — agar live demo fail ho → screen recording laptop pe ready rakho</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Presentation slides ek baar poora rehearse karo — timing check karo</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="B" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">Final GitHub push — sab code clean, commented, aur working</div><span class="task-tag tag-easy">Easy</span></div>
+        <div class="task-item" data-person="A" onclick="toggle(this)"><div class="task-checkbox"></div><div class="task-text">🎉 PROJECT COMPLETE — Dono celebrate karo — well done!</div><span class="task-tag tag-easy">Easy</span></div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- Stats Bar -->
+<div class="stats-bar">
+  <div class="stat-item">
+    <div class="stat-dot" style="background:var(--accent)"></div>
+    <span style="color:var(--muted)">Person A:</span>
+    <span class="stat-val" id="statA" style="color:var(--pa)">0/60</span>
+  </div>
+  <div class="stat-item">
+    <div class="stat-dot" style="background:var(--purple)"></div>
+    <span style="color:var(--muted)">Person B:</span>
+    <span class="stat-val" id="statB" style="color:var(--pb)">10/46</span>
+  </div>
+  <div class="stat-item">
+    <div class="stat-dot" style="background:var(--green)"></div>
+    <span style="color:var(--muted)">Total Done:</span>
+    <span class="stat-val" id="statTotal" style="color:var(--green)">10/106</span>
+  </div>
+  <button class="reset-btn" onclick="resetAll()">↺ Reset All</button>
+</div>
+
+<script>
+  // Load saved state
+  const SAVE_KEY = 'qnids_todo_v1';
+
+  function getSaved() {
+    try { return JSON.parse(localStorage.getItem(SAVE_KEY)) || {}; } catch(e) { return {}; }
+  }
+  function saveState(state) {
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch(e) {}
+  }
+
+  // Toggle task
+  function toggle(el) {
+    el.classList.toggle('done');
+    const saved = getSaved();
+    const id = getTaskId(el);
+    saved[id] = el.classList.contains('done');
+    saveState(saved);
+    updateAll();
+  }
+
+  function getTaskId(el) {
+    const tasks = Array.from(document.querySelectorAll('.task-item'));
+    return 'task_' + tasks.indexOf(el);
+  }
+
+  // Restore saved state
+  function restoreState() {
+    const saved = getSaved();
+    const tasks = document.querySelectorAll('.task-item');
+    tasks.forEach((t, i) => {
+      if (saved['task_' + i]) t.classList.add('done');
+    });
+  }
+
+  // Toggle week collapse
+  function toggleWeek(id) {
+    document.getElementById(id).classList.toggle('collapsed');
+  }
+
+  // Update all progress
+  function updateAll() {
+    const weeks = ['week1','week2','week3','week4','week5','week6','week7','week8'];
+    let totalDone = 0, totalAll = 0, aDone = 0, aAll = 0, bDone = 0, bAll = 0;
+
+    weeks.forEach(wk => {
+      const items = document.querySelectorAll(`#${wk} .task-item:not(.hidden-filter)`);
+      const done  = document.querySelectorAll(`#${wk} .task-item.done:not(.hidden-filter)`);
+      const pct   = items.length ? Math.round(done.length / items.length * 100) : 0;
+      const bar   = document.getElementById('bar-' + wk);
+      const pctEl = document.getElementById('pct-' + wk);
+      if (bar) bar.style.width = pct + '%';
+      if (pctEl) pctEl.textContent = pct + '%';
+      totalDone += done.length; totalAll += items.length;
+    });
+
+    document.querySelectorAll('.task-item').forEach(t => {
+      const p = t.dataset.person;
+      const done = t.classList.contains('done');
+      if (p === 'A') { aAll++; if (done) aDone++; }
+      else if (p === 'B') { bAll++; if (done) bDone++; }
+    });
+
+    document.getElementById('statA').textContent = `${aDone}/${aAll}`;
+    document.getElementById('statB').textContent = `${bDone}/${bAll}`;
+    document.getElementById('statTotal').textContent = `${totalDone}/${totalAll}`;
+    document.getElementById('mainCount').textContent = `${totalDone}/${totalAll}`;
+
+    const pct = totalAll ? totalDone / totalAll : 0;
+    const circ = 144.5;
+    document.getElementById('mainRing').style.strokeDashoffset = circ - (pct * circ);
+    document.getElementById('ringPct').textContent = Math.round(pct * 100) + '%';
+  }
+
+  // Filter by person
+  let currentFilter = 'both';
+  function filterPerson(person, btn) {
+    currentFilter = person;
+    document.querySelectorAll('.ptab').forEach(t => {
+      t.classList.remove('active-a','active-b','active-both');
+    });
+    if (person === 'A') btn.classList.add('active-a');
+    else if (person === 'B') btn.classList.add('active-b');
+    else btn.classList.add('active-both');
+
+    document.querySelectorAll('.task-item').forEach(t => {
+      if (person === 'both') t.classList.remove('hidden-filter');
+      else if (t.dataset.person !== person) t.classList.add('hidden-filter');
+      else t.classList.remove('hidden-filter');
+    });
+    updateAll();
+  }
+
+  // Reset
+  function resetAll() {
+    if (!confirm('Sab progress reset ho jayegi — sure ho?')) return;
+    try { localStorage.removeItem(SAVE_KEY); } catch(e) {}
+    document.querySelectorAll('.task-item').forEach(t => t.classList.remove('done'));
+    updateAll();
+  }
+
+  // Init
+  restoreState();
+  updateAll();
+</script>
+
+
+</body></html>

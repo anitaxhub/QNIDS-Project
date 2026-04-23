@@ -1,0 +1,27 @@
+{
+  "model": "RF+QPSO (19 features)",
+  "accuracy": 83.21,
+  "baseline_accuracy": 77.04,
+  "improvement": 6.17,
+  "selected_features": [
+    "duration",
+    "protocol_type",
+    "service",
+    "flag",
+    "src_bytes",
+    "wrong_fragment",
+    "urgent",
+    "num_failed_logins",
+    "root_shell",
+    "num_root",
+    "num_file_creations",
+    "num_shells",
+    "num_access_files",
+    "is_host_login",
+    "serror_rate",
+    "dst_host_count",
+    "dst_host_same_src_port_rate",
+    "dst_host_srv_diff_host_rate",
+    "dst_host_rerror_rate"
+  ]
+}

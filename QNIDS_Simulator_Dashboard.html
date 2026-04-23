@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QNIDS — Quantum-Inspired Network Intrusion Detection System</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;600;700&display=swap');
+
+  :root {
+    --bg:       #080d14;
+    --panel:    #0d1520;
+    --panel2:   #111d2e;
+    --border:   #1a3050;
+    --border2:  #0f2540;
+    --accent:   #00d4ff;
+    --accent2:  #0066ff;
+    --green:    #00ff88;
+    --red:      #ff3355;
+    --orange:   #ff8800;
+    --purple:   #8855ff;
+    --text:     #c8dff0;
+    --muted:    #4a6a8a;
+    --glow:     0 0 20px rgba(0,212,255,0.3);
+    --glow-g:   0 0 20px rgba(0,255,136,0.3);
+    --glow-r:   0 0 20px rgba(255,51,85,0.3);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    font-family: 'Exo 2', sans-serif;
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scan line effect */
+  body::after {
+    content:'';
+    position:fixed; top:0; left:0; right:0; bottom:0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    pointer-events:none; z-index:9999;
+  }
+
+  /* ── TOP NAV ── */
+  .navbar {
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 0 24px;
+    height: 54px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top:0; z-index:100;
+  }
+  .nav-brand {
+    display:flex; align-items:center; gap:12px;
+  }
+  .nav-logo {
+    width:32px; height:32px;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:900; color:#fff;
+    box-shadow: var(--glow);
+  }
+  .nav-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size:18px; font-weight:700; letter-spacing:2px;
+    color: var(--accent);
+    text-shadow: 0 0 12px rgba(0,212,255,0.5);
+  }
+  .nav-sub { font-size:10px; color:var(--muted); letter-spacing:1px; margin-top:-2px; }
+
+  .nav-status {
+    display:flex; align-items:center; gap:20px;
+  }
+  .status-pill {
+    display:flex; align-items:center; gap:6px;
+    background: rgba(0,255,136,0.08);
+    border: 1px solid rgba(0,255,136,0.3);
+    border-radius:20px; padding:4px 12px;
+    font-size:11px; font-weight:600; color:var(--green);
+    letter-spacing:1px;
+  }
+  .status-dot {
+    width:7px; height:7px; border-radius:50%;
+    background:var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 1.4s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(0.8)} }
+
+  .nav-time {
+    font-family:'Share Tech Mono', monospace;
+    font-size:12px; color:var(--muted);
+  }
+
+  /* ── GRID LAYOUT ── */
+  .main-grid {
+    display:grid;
+    grid-template-columns: 220px 1fr 280px;
+    grid-template-rows: auto 1fr;
+    gap:0;
+    height: calc(100vh - 54px);
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    padding: 16px 0;
+    overflow-y: auto;
+  }
+  .sidebar-section {
+    padding: 6px 16px 10px;
+    margin-bottom:4px;
+  }
+  .sidebar-label {
+    font-size:9px; letter-spacing:2px; color:var(--muted);
+    font-weight:700; text-transform:uppercase; margin-bottom:6px;
+  }
+  .sidebar-item {
+    display:flex; align-items:center; gap:10px;
+    padding:8px 12px; border-radius:6px;
+    cursor:pointer; margin-bottom:2px;
+    transition:all 0.2s;
+    font-size:13px; font-weight:500;
+    color: var(--muted);
+  }
+  .sidebar-item:hover { background:rgba(0,212,255,0.06); color:var(--text); }
+  .sidebar-item.active {
+    background: rgba(0,212,255,0.1);
+    color: var(--accent);
+    border-left: 2px solid var(--accent);
+  }
+  .sidebar-item .icon { font-size:15px; width:18px; text-align:center; }
+  .sidebar-badge {
+    margin-left:auto; background:var(--red);
+    color:#fff; font-size:9px; font-weight:700;
+    border-radius:10px; padding:1px 6px;
+    box-shadow: var(--glow-r);
+  }
+  .sidebar-badge.green { background:var(--green); color:#000; box-shadow:var(--glow-g); }
+
+  /* ── CENTER CONTENT ── */
+  .content {
+    background: var(--bg);
+    overflow-y: auto;
+    padding: 20px;
+    display:flex; flex-direction:column; gap:16px;
+  }
+
+  /* ── TOP METRICS ROW ── */
+  .metrics-row {
+    display:grid; grid-template-columns: repeat(4, 1fr); gap:12px;
+  }
+  .metric-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius:10px; padding:16px;
+    position:relative; overflow:hidden;
+    transition: border-color 0.3s;
+  }
+  .metric-card::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  }
+  .metric-card.blue::before { background: linear-gradient(90deg,var(--accent2),var(--accent)); }
+  .metric-card.green::before { background: linear-gradient(90deg,#00aa55,var(--green)); }
+  .metric-card.red::before { background: linear-gradient(90deg,#aa0022,var(--red)); }
+  .metric-card.purple::before { background: linear-gradient(90deg,#4422aa,var(--purple)); }
+
+  .metric-label {
+    font-size:10px; letter-spacing:1.5px; color:var(--muted);
+    text-transform:uppercase; font-weight:600; margin-bottom:8px;
+  }
+  .metric-value {
+    font-family:'Rajdhani',sans-serif;
+    font-size:32px; font-weight:700; line-height:1;
+    margin-bottom:4px;
+  }
+  .metric-card.blue .metric-value { color:var(--accent); text-shadow:0 0 15px rgba(0,212,255,0.4); }
+  .metric-card.green .metric-value { color:var(--green); text-shadow:0 0 15px rgba(0,255,136,0.4); }
+  .metric-card.red .metric-value { color:var(--red); text-shadow:0 0 15px rgba(255,51,85,0.4); }
+  .metric-card.purple .metric-value { color:var(--purple); text-shadow:0 0 15px rgba(136,85,255,0.4); }
+  .metric-sub { font-size:11px; color:var(--muted); }
+  .metric-trend {
+    position:absolute; bottom:14px; right:14px;
+    font-size:11px; font-weight:600;
+  }
+  .metric-trend.up { color:var(--green); }
+  .metric-trend.down { color:var(--red); }
+
+  /* ── CHART AREA ── */
+  .charts-row { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+
+  .panel-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius:10px; overflow:hidden;
+  }
+  .panel-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 16px;
+    border-bottom: 1px solid var(--border2);
+    background: var(--panel2);
+  }
+  .panel-title {
+    font-family:'Rajdhani',sans-serif;
+    font-size:13px; font-weight:600; letter-spacing:1px;
+    color:var(--text);
+  }
+  .panel-badge {
+    font-size:9px; padding:2px 8px; border-radius:10px;
+    font-weight:600; letter-spacing:1px;
+  }
+  .pb-live { background:rgba(0,255,136,0.15); color:var(--green); border:1px solid rgba(0,255,136,0.3); }
+  .pb-qpso { background:rgba(0,102,255,0.15); color:var(--accent2); border:1px solid rgba(0,102,255,0.3); }
+
+  /* SVG Chart */
+  .chart-wrap { padding:16px; }
+
+  /* Bar chart comparison */
+  .bar-chart { padding:16px 20px; }
+  .bar-group { margin-bottom:14px; }
+  .bar-label { font-size:11px; color:var(--muted); margin-bottom:5px; display:flex; justify-content:space-between; }
+  .bar-label span { color:var(--text); font-weight:600; }
+  .bar-track { height:10px; background:rgba(255,255,255,0.05); border-radius:5px; overflow:hidden; }
+  .bar-fill { height:100%; border-radius:5px; position:relative; }
+  .bar-fill.classical { background: linear-gradient(90deg, #334466, #5577aa); }
+  .bar-fill.quantum { background: linear-gradient(90deg, var(--accent2), var(--accent)); box-shadow: 0 0 8px rgba(0,212,255,0.4); }
+
+  /* ── LIVE FEED ── */
+  .feed-wrap { padding:0; }
+  .feed-row {
+    display:grid;
+    grid-template-columns: 90px 120px 1fr 80px 70px;
+    gap:12px; align-items:center;
+    padding:9px 16px;
+    border-bottom: 1px solid var(--border2);
+    font-family:'Share Tech Mono',monospace;
+    font-size:11px;
+    transition: background 0.2s;
+    animation: slideIn 0.3s ease;
+  }
+  @keyframes slideIn { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:none} }
+  .feed-row:hover { background:rgba(0,212,255,0.04); }
+  .feed-row.header {
+    background:var(--panel2); font-size:9px; letter-spacing:1px;
+    color:var(--muted); font-family:'Exo 2',sans-serif; font-weight:700;
+    text-transform:uppercase; animation:none;
+  }
+  .attack-tag {
+    padding:2px 8px; border-radius:4px; font-size:10px;
+    font-family:'Exo 2',sans-serif; font-weight:700; text-align:center;
+  }
+  .tag-attack { background:rgba(255,51,85,0.2); color:var(--red); border:1px solid rgba(255,51,85,0.4); }
+  .tag-normal { background:rgba(0,255,136,0.12); color:var(--green); border:1px solid rgba(0,255,136,0.3); }
+  .tag-dos    { background:rgba(255,136,0,0.15); color:var(--orange); border:1px solid rgba(255,136,0,0.35); }
+  .tag-probe  { background:rgba(136,85,255,0.15); color:var(--purple); border:1px solid rgba(136,85,255,0.35); }
+
+  .conf-bar { height:4px; background:var(--border); border-radius:2px; overflow:hidden; }
+  .conf-fill { height:100%; border-radius:2px; }
+  .conf-high { background:var(--green); }
+  .conf-med  { background:var(--orange); }
+
+  /* ── RIGHT PANEL ── */
+  .right-panel {
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    display:flex; flex-direction:column;
+  }
+
+  .rp-section {
+    padding:14px 16px;
+    border-bottom: 1px solid var(--border2);
+  }
+  .rp-title {
+    font-size:9px; letter-spacing:2px; color:var(--muted);
+    text-transform:uppercase; font-weight:700; margin-bottom:12px;
+  }
+
+  /* Model status */
+  .model-status {
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .model-row {
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--panel2); border-radius:6px; padding:8px 10px;
+    border:1px solid var(--border2);
+  }
+  .model-name { font-size:12px; font-weight:600; color:var(--text); }
+  .model-acc {
+    font-family:'Share Tech Mono',monospace;
+    font-size:11px;
+  }
+  .model-acc.q { color:var(--accent); }
+  .model-acc.c { color:var(--muted); }
+  .model-dot { width:6px; height:6px; border-radius:50%; margin-right:6px; display:inline-block; }
+  .d-green { background:var(--green); box-shadow:0 0 6px var(--green); }
+  .d-blue  { background:var(--accent); box-shadow:0 0 6px var(--accent); }
+
+  /* Donut */
+  .donut-wrap {
+    display:flex; align-items:center; gap:16px;
+  }
+  .donut-svg { flex-shrink:0; }
+  .donut-legend { flex:1; }
+  .legend-row {
+    display:flex; align-items:center; gap:6px;
+    margin-bottom:6px; font-size:11px;
+  }
+  .legend-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .legend-pct { margin-left:auto; font-weight:700; font-family:'Share Tech Mono',monospace; font-size:11px; }
+
+  /* Feature importance */
+  .feat-list { display:flex; flex-direction:column; gap:6px; }
+  .feat-row { }
+  .feat-name { font-size:10px; color:var(--muted); margin-bottom:3px; display:flex; justify-content:space-between; }
+  .feat-name span { color:var(--accent); font-family:'Share Tech Mono',monospace; }
+  .feat-track { height:5px; background:rgba(255,255,255,0.05); border-radius:3px; overflow:hidden; }
+  .feat-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,var(--accent2),var(--accent)); box-shadow:0 0 6px rgba(0,212,255,0.3); }
+
+  /* Compare table */
+  .cmp-table { width:100%; border-collapse:collapse; font-size:11px; }
+  .cmp-table th {
+    text-align:left; padding:6px 8px;
+    color:var(--muted); font-size:9px; letter-spacing:1px;
+    text-transform:uppercase; border-bottom:1px solid var(--border2);
+  }
+  .cmp-table td { padding:7px 8px; border-bottom:1px solid rgba(255,255,255,0.03); }
+  .cmp-table td.better { color:var(--green); font-weight:700; font-family:'Share Tech Mono',monospace; }
+  .cmp-table td.worse  { color:var(--muted); font-family:'Share Tech Mono',monospace; }
+  .improve { font-size:9px; color:var(--green); margin-left:4px; }
+
+  /* Export buttons */
+  .btn-row { display:flex; gap:8px; flex-wrap:wrap; }
+  .btn {
+    padding:7px 14px; border-radius:6px; border:none;
+    font-family:'Exo 2',sans-serif; font-size:11px; font-weight:600;
+    cursor:pointer; letter-spacing:0.5px; transition:all 0.2s;
+  }
+  .btn-outline {
+    background:transparent; color:var(--accent);
+    border:1px solid rgba(0,212,255,0.4);
+  }
+  .btn-outline:hover { background:rgba(0,212,255,0.1); box-shadow:var(--glow); }
+  .btn-solid {
+    background:linear-gradient(135deg,var(--accent2),var(--accent));
+    color:#000; font-weight:700;
+  }
+  .btn-solid:hover { box-shadow:var(--glow); transform:translateY(-1px); }
+
+  /* input section */
+  .input-section {
+    padding:14px 16px;
+    border-bottom:1px solid var(--border2);
+  }
+  .input-row { display:flex; gap:8px; align-items:center; }
+  .file-drop {
+    flex:1; padding:8px 12px;
+    background:var(--panel2); border:1px dashed var(--border);
+    border-radius:6px; font-size:11px; color:var(--muted);
+    cursor:pointer; text-align:center;
+  }
+  .run-btn {
+    padding:8px 18px; border-radius:6px; border:none;
+    background:linear-gradient(135deg,var(--accent2),var(--accent));
+    color:#000; font-family:'Rajdhani',sans-serif;
+    font-size:13px; font-weight:700; letter-spacing:1px;
+    cursor:pointer; box-shadow:var(--glow);
+    transition:all 0.2s;
+  }
+  .run-btn:hover { transform:translateY(-1px); box-shadow:0 0 30px rgba(0,212,255,0.5); }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width:4px; height:4px; }
+  ::-webkit-scrollbar-track { background:var(--bg); }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+
+  /* grid line bg effect */
+  .content { background-image: radial-gradient(circle at 20% 50%, rgba(0,102,255,0.04) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(0,212,255,0.03) 0%, transparent 40%); }
+</style>
+</head>
+<body>
+
+<!-- ══ NAVBAR ══ -->
+<nav class="navbar">
+  <div class="nav-brand">
+    <div class="nav-logo">Q</div>
+    <div>
+      <div class="nav-title">QNIDS</div>
+      <div class="nav-sub">QUANTUM-INSPIRED NETWORK INTRUSION DETECTION SYSTEM</div>
+    </div>
+  </div>
+  <div class="nav-status">
+    <div class="status-pill"><div class="status-dot"></div>SYSTEM ACTIVE</div>
+    <div class="nav-time" id="clock">--:--:--</div>
+  </div>
+</nav>
+
+<!-- ══ MAIN GRID ══ -->
+<div class="main-grid">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Navigation</div>
+      <div class="sidebar-item active"><span class="icon">⬡</span> Dashboard</div>
+      <div class="sidebar-item"><span class="icon">⚡</span> Live Detection <span class="sidebar-badge">3</span></div>
+      <div class="sidebar-item"><span class="icon">◈</span> QPSO Analysis</div>
+      <div class="sidebar-item"><span class="icon">⊞</span> Model Comparison</div>
+      <div class="sidebar-item"><span class="icon">◎</span> Feature Selector</div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Dataset</div>
+      <div class="sidebar-item"><span class="icon">▣</span> NSL-KDD <span class="sidebar-badge green">✓</span></div>
+      <div class="sidebar-item"><span class="icon">▣</span> UNSW-NB15 <span class="sidebar-badge green">✓</span></div>
+      <div class="sidebar-item"><span class="icon">+</span> Load Custom</div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Reports</div>
+      <div class="sidebar-item"><span class="icon">↓</span> Export PDF</div>
+      <div class="sidebar-item"><span class="icon">↓</span> Export CSV</div>
+      <div class="sidebar-item"><span class="icon">⚙</span> Settings</div>
+    </div>
+
+    <!-- Mini stats -->
+    <div style="padding:16px; margin-top:8px;">
+      <div style="background:var(--panel2);border:1px solid var(--border2);border-radius:8px;padding:12px;">
+        <div style="font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">QPSO Status</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Features reduced</div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:22px;color:var(--accent);font-weight:700;margin-bottom:6px;">41 → 19</div>
+        <div class="bar-track"><div class="bar-fill quantum" style="width:46%;"></div></div>
+        <div style="font-size:9px;color:var(--muted);margin-top:4px;">53% dimensionality reduction</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── CENTER CONTENT ── -->
+  <main class="content">
+
+    <!-- Input Row -->
+    <div class="input-section" style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
+      <div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:8px;">INPUT NETWORK TRAFFIC DATA</div>
+      <div class="input-row">
+        <div class="file-drop">📂 &nbsp; Drop .csv / .pcap file here or click to browse</div>
+        <select style="background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-size:12px;font-family:'Exo 2',sans-serif;">
+          <option>NSL-KDD</option>
+          <option>UNSW-NB15</option>
+        </select>
+        <select style="background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-size:12px;font-family:'Exo 2',sans-serif;">
+          <option>Hybrid RF+QPSO</option>
+          <option>Classical RF</option>
+          <option>Decision Tree</option>
+        </select>
+        <button class="run-btn">▶ RUN DETECTION</button>
+      </div>
+    </div>
+
+    <!-- Metrics Row -->
+    <div class="metrics-row">
+      <div class="metric-card blue">
+        <div class="metric-label">Detection Accuracy</div>
+        <div class="metric-value">94.2%</div>
+        <div class="metric-sub">Hybrid RF + QPSO</div>
+        <div class="metric-trend up">▲ +6.1%</div>
+      </div>
+      <div class="metric-card red">
+        <div class="metric-label">False Positive Rate</div>
+        <div class="metric-value">4.8%</div>
+        <div class="metric-sub">vs 12.3% baseline</div>
+        <div class="metric-trend up">▼ −7.5%</div>
+      </div>
+      <div class="metric-card green">
+        <div class="metric-label">Attacks Detected</div>
+        <div class="metric-value">1,247</div>
+        <div class="metric-sub">Last 60 minutes</div>
+        <div class="metric-trend up">Live</div>
+      </div>
+      <div class="metric-card purple">
+        <div class="metric-label">Packets Analyzed</div>
+        <div class="metric-value">48.3K</div>
+        <div class="metric-sub">Processing: 812/sec</div>
+        <div class="metric-trend up">▲ Active</div>
+      </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="charts-row">
+
+      <!-- Live Traffic Chart (SVG) -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <div class="panel-title">LIVE TRAFFIC ACTIVITY</div>
+          <span class="panel-badge pb-live">● LIVE</span>
+        </div>
+        <div class="chart-wrap">
+          <svg viewBox="0 0 420 110" width="100%" style="overflow:visible">
+            <defs>
+              <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#00d4ff" stop-opacity="0.4"/>
+                <stop offset="100%" stop-color="#00d4ff" stop-opacity="0"/>
+              </linearGradient>
+              <linearGradient id="attackGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#ff3355" stop-opacity="0.4"/>
+                <stop offset="100%" stop-color="#ff3355" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <!-- Grid lines -->
+            <line x1="0" y1="20" x2="420" y2="20" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+            <line x1="0" y1="50" x2="420" y2="50" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+            <line x1="0" y1="80" x2="420" y2="80" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+            <!-- Normal traffic area -->
+            <path d="M0,65 C30,60 50,55 70,58 C90,61 110,50 130,45 C150,40 170,42 190,38 C210,34 230,30 250,35 C270,40 290,38 310,32 C330,26 350,30 370,28 C390,26 410,24 420,22 L420,105 L0,105 Z"
+              fill="url(#lineGrad)" opacity="0.6"/>
+            <path d="M0,65 C30,60 50,55 70,58 C90,61 110,50 130,45 C150,40 170,42 190,38 C210,34 230,30 250,35 C270,40 290,38 310,32 C330,26 350,30 370,28 C390,26 410,24 420,22"
+              stroke="#00d4ff" stroke-width="1.5" fill="none" filter="drop-shadow(0 0 4px rgba(0,212,255,0.6))"/>
+            <!-- Attack spikes -->
+            <path d="M80,58 L85,15 L90,58" stroke="#ff3355" stroke-width="1.5" fill="rgba(255,51,85,0.2)"/>
+            <path d="M210,38 L215,8 L220,38"  stroke="#ff3355" stroke-width="1.5" fill="rgba(255,51,85,0.2)"/>
+            <path d="M345,30 L350,12 L355,30" stroke="#ff3355" stroke-width="1.5" fill="rgba(255,51,85,0.2)"/>
+            <!-- Labels -->
+            <text x="4" y="109" fill="#4a6a8a" font-size="8" font-family="Share Tech Mono">00:00</text>
+            <text x="95" y="109" fill="#4a6a8a" font-size="8" font-family="Share Tech Mono">15:00</text>
+            <text x="195" y="109" fill="#4a6a8a" font-size="8" font-family="Share Tech Mono">30:00</text>
+            <text x="295" y="109" fill="#4a6a8a" font-size="8" font-family="Share Tech Mono">45:00</text>
+            <text x="385" y="109" fill="#4a6a8a" font-size="8" font-family="Share Tech Mono">NOW</text>
+            <!-- Legend -->
+            <circle cx="8" cy="8" r="3" fill="#00d4ff"/>
+            <text x="14" y="12" fill="#c8dff0" font-size="8" font-family="Exo 2">Normal Traffic</text>
+            <circle cx="90" cy="8" r="3" fill="#ff3355"/>
+            <text x="96" y="12" fill="#c8dff0" font-size="8" font-family="Exo 2">Attack Spike</text>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Classical vs Quantum Comparison -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <div class="panel-title">CLASSICAL vs QUANTUM COMPARISON</div>
+          <span class="panel-badge pb-qpso">QPSO</span>
+        </div>
+        <div class="bar-chart">
+          <div style="display:flex;gap:16px;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);">
+              <div style="width:10px;height:10px;border-radius:2px;background:linear-gradient(135deg,#334466,#5577aa);"></div> Classical RF
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--accent);">
+              <div style="width:10px;height:10px;border-radius:2px;background:linear-gradient(135deg,#0066ff,#00d4ff);"></div> Hybrid RF+QPSO
+            </div>
+          </div>
+          <div class="bar-group">
+            <div class="bar-label">Accuracy <span>88.1% → 94.2%</span></div>
+            <div style="display:flex;flex-direction:column;gap:3px;">
+              <div class="bar-track"><div class="bar-fill classical" style="width:88.1%"></div></div>
+              <div class="bar-track"><div class="bar-fill quantum" style="width:94.2%"></div></div>
+            </div>
+          </div>
+          <div class="bar-group">
+            <div class="bar-label">F1-Score <span>0.871 → 0.938</span></div>
+            <div style="display:flex;flex-direction:column;gap:3px;">
+              <div class="bar-track"><div class="bar-fill classical" style="width:87.1%"></div></div>
+              <div class="bar-track"><div class="bar-fill quantum" style="width:93.8%"></div></div>
+            </div>
+          </div>
+          <div class="bar-group">
+            <div class="bar-label">Precision <span>0.862 → 0.941</span></div>
+            <div style="display:flex;flex-direction:column;gap:3px;">
+              <div class="bar-track"><div class="bar-fill classical" style="width:86.2%"></div></div>
+              <div class="bar-track"><div class="bar-fill quantum" style="width:94.1%"></div></div>
+            </div>
+          </div>
+          <div class="bar-group">
+            <div class="bar-label">Recall <span>0.879 → 0.936</span></div>
+            <div style="display:flex;flex-direction:column;gap:3px;">
+              <div class="bar-track"><div class="bar-fill classical" style="width:87.9%"></div></div>
+              <div class="bar-track"><div class="bar-fill quantum" style="width:93.6%"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Feed Table -->
+    <div class="panel-card">
+      <div class="panel-header">
+        <div class="panel-title">LIVE DETECTION FEED</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span class="panel-badge pb-live" id="feed-count">● 1,247 events</span>
+          <button class="btn btn-outline" style="padding:3px 10px;font-size:10px;">PAUSE</button>
+          <button class="btn btn-outline" style="padding:3px 10px;font-size:10px;">CLEAR</button>
+        </div>
+      </div>
+      <div class="feed-wrap">
+        <div class="feed-row header">
+          <div>TIMESTAMP</div>
+          <div>SOURCE IP</div>
+          <div>ATTACK TYPE</div>
+          <div>VERDICT</div>
+          <div>CONFIDENCE</div>
+        </div>
+        <div id="feed-body">
+          <!-- populated by JS -->
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ── RIGHT PANEL ── -->
+  <aside class="right-panel">
+
+    <!-- Model Status -->
+    <div class="rp-section">
+      <div class="rp-title">Active Models</div>
+      <div class="model-status">
+        <div class="model-row">
+          <div>
+            <span class="model-dot d-blue"></span>
+            <span class="model-name">Hybrid RF + QPSO</span>
+          </div>
+          <div class="model-acc q">94.2%</div>
+        </div>
+        <div class="model-row">
+          <div>
+            <span class="model-dot" style="background:var(--muted);"></span>
+            <span class="model-name" style="color:var(--muted);">Classical RF</span>
+          </div>
+          <div class="model-acc c">88.1%</div>
+        </div>
+        <div class="model-row">
+          <div>
+            <span class="model-dot" style="background:var(--muted);"></span>
+            <span class="model-name" style="color:var(--muted);">Decision Tree</span>
+          </div>
+          <div class="model-acc c">85.7%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Attack Distribution Donut -->
+    <div class="rp-section">
+      <div class="rp-title">Attack Distribution</div>
+      <div class="donut-wrap">
+        <svg class="donut-svg" viewBox="0 0 90 90" width="90" height="90">
+          <circle cx="45" cy="45" r="35" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="12"/>
+          <!-- DoS 38% -->
+          <circle cx="45" cy="45" r="35" fill="none" stroke="#ff3355" stroke-width="12"
+            stroke-dasharray="83.5 135.7" stroke-dashoffset="0" transform="rotate(-90 45 45)"
+            filter="drop-shadow(0 0 4px rgba(255,51,85,0.5))"/>
+          <!-- DDoS 27% -->
+          <circle cx="45" cy="45" r="35" fill="none" stroke="#ff8800" stroke-width="12"
+            stroke-dasharray="59.4 160.1" stroke-dashoffset="-83.5" transform="rotate(-90 45 45)"/>
+          <!-- Probe 20% -->
+          <circle cx="45" cy="45" r="35" fill="none" stroke="#8855ff" stroke-width="12"
+            stroke-dasharray="44 175.3" stroke-dashoffset="-142.9" transform="rotate(-90 45 45)"/>
+          <!-- R2L+U2R 15% -->
+          <circle cx="45" cy="45" r="35" fill="none" stroke="#00d4ff" stroke-width="12"
+            stroke-dasharray="32.9 186.4" stroke-dashoffset="-186.9" transform="rotate(-90 45 45)"/>
+          <text x="45" y="48" text-anchor="middle" fill="white" font-size="10" font-family="Rajdhani" font-weight="700">1247</text>
+          <text x="45" y="57" text-anchor="middle" fill="#4a6a8a" font-size="6" font-family="Exo 2">TOTAL</text>
+        </svg>
+        <div class="donut-legend">
+          <div class="legend-row"><div class="legend-dot" style="background:#ff3355;box-shadow:0 0 5px #ff3355"></div><span>DoS</span><span class="legend-pct" style="color:#ff3355">38%</span></div>
+          <div class="legend-row"><div class="legend-dot" style="background:#ff8800"></div><span>DDoS</span><span class="legend-pct" style="color:#ff8800">27%</span></div>
+          <div class="legend-row"><div class="legend-dot" style="background:#8855ff"></div><span>Probe</span><span class="legend-pct" style="color:#8855ff">20%</span></div>
+          <div class="legend-row"><div class="legend-dot" style="background:#00d4ff"></div><span>R2L/U2R</span><span class="legend-pct" style="color:#00d4ff">15%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Features (QPSO selected) -->
+    <div class="rp-section">
+      <div class="rp-title">Top QPSO-Selected Features</div>
+      <div class="feat-list">
+        <div class="feat-row">
+          <div class="feat-name">src_bytes <span>0.94</span></div>
+          <div class="feat-track"><div class="feat-fill" style="width:94%"></div></div>
+        </div>
+        <div class="feat-row">
+          <div class="feat-name">dst_bytes <span>0.89</span></div>
+          <div class="feat-track"><div class="feat-fill" style="width:89%"></div></div>
+        </div>
+        <div class="feat-row">
+          <div class="feat-name">duration <span>0.82</span></div>
+          <div class="feat-track"><div class="feat-fill" style="width:82%"></div></div>
+        </div>
+        <div class="feat-row">
+          <div class="feat-name">count <span>0.77</span></div>
+          <div class="feat-track"><div class="feat-fill" style="width:77%"></div></div>
+        </div>
+        <div class="feat-row">
+          <div class="feat-name">serror_rate <span>0.71</span></div>
+          <div class="feat-track"><div class="feat-fill" style="width:71%"></div></div>
+        </div>
+        <div class="feat-row">
+          <div class="feat-name">flag <span>0.68</span></div>
+          <div class="feat-track"><div class="feat-fill" style="width:68%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Export -->
+    <div class="rp-section">
+      <div class="rp-title">Export Results</div>
+      <div class="btn-row">
+        <button class="btn btn-outline">↓ PDF Report</button>
+        <button class="btn btn-outline">↓ CSV Data</button>
+        <button class="btn btn-solid" style="width:100%;text-align:center;margin-top:4px;">Generate Full Report</button>
+      </div>
+    </div>
+
+  </aside>
+</div>
+
+<script>
+  // Clock
+  function updateClock(){
+    const now = new Date();
+    document.getElementById('clock').textContent =
+      now.toTimeString().slice(0,8);
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // Feed data
+  const attackTypes = [
+    {label:'DoS Attack',    tag:'tag-dos',    verdict:'ATTACK', conf:92},
+    {label:'Normal',        tag:'tag-normal', verdict:'NORMAL', conf:98},
+    {label:'Probe',         tag:'tag-probe',  verdict:'ATTACK', conf:87},
+    {label:'DDoS',          tag:'tag-attack', verdict:'ATTACK', conf:95},
+    {label:'Normal',        tag:'tag-normal', verdict:'NORMAL', conf:99},
+    {label:'R2L Attempt',   tag:'tag-attack', verdict:'ATTACK', conf:83},
+    {label:'Normal',        tag:'tag-normal', verdict:'NORMAL', conf:97},
+    {label:'Port Scan',     tag:'tag-probe',  verdict:'ATTACK', conf:91},
+  ];
+  const ips = ['192.168.1.','10.0.0.','172.16.0.','203.0.113.'];
+
+  function randomIP(){ return ips[Math.floor(Math.random()*ips.length)] + Math.floor(Math.random()*254+1); }
+  function randomEvent(){ return attackTypes[Math.floor(Math.random()*attackTypes.length)]; }
+
+  function addRow(){
+    const ev = randomEvent();
+    const now = new Date();
+    const ts  = now.toTimeString().slice(0,8);
+    const row = document.createElement('div');
+    row.className = 'feed-row';
+    const confClass = ev.conf > 90 ? 'conf-high' : 'conf-med';
+    const verdictColor = ev.verdict==='ATTACK' ? 'var(--red)' : 'var(--green)';
+    row.innerHTML = `
+      <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted)">${ts}</div>
+      <div style="font-family:'Share Tech Mono',monospace;font-size:10px;">${randomIP()}</div>
+      <div><span class="attack-tag ${ev.tag}">${ev.label}</span></div>
+      <div style="font-weight:700;font-size:11px;color:${verdictColor}">${ev.verdict}</div>
+      <div>
+        <div style="font-size:10px;margin-bottom:3px;font-family:'Share Tech Mono',monospace;color:${verdictColor}">${ev.conf}%</div>
+        <div class="conf-bar"><div class="conf-fill ${confClass}" style="width:${ev.conf}%"></div></div>
+      </div>
+    `;
+    const body = document.getElementById('feed-body');
+    body.insertBefore(row, body.firstChild);
+    if(body.children.length > 8) body.removeChild(body.lastChild);
+  }
+
+  // Init with 8 rows
+  for(let i=0;i<8;i++) addRow();
+  // Add new row every 2.5s
+  setInterval(addRow, 2500);
+</script>
+</body>
+</html>
