@@ -1,0 +1,11 @@
+pyqt5
+scikit-learn
+pandas
+numpy
+scapy
+matplotlib
+reportlab
+pillow
+deap
+pyswarm
+anthropic
