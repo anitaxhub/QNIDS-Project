@@ -56,18 +56,30 @@ class CSVSimulator:
 
     def load_csv(self, filepath):
         try:
-            self.df = pd.read_csv(
-                filepath,
-                header=None,
-                names=NSLKDD_COLUMNS
-            )
-            self.current_row = 0
-            print(f"CSV loaded: {len(self.df)} rows")
-            return True
-        except Exception as e:
-            print(f"CSV load error: {e}")
-            return False
+            with open(filepath, 'r') as f:
+                first_line = f.readline().strip()
 
+            has_header = not first_line[0].isdigit()
+
+            if has_header:
+                self.df = pd.read_csv(filepath)
+                self.df.columns = self.df.columns.str.strip()
+                print(f"[simulator] CIC-IDS2017 CSV loaded: {len(self.df)} rows")
+                print(f"[simulator] Columns: {list(self.df.columns[:5])}...")
+            else:
+                self.df = pd.read_csv(
+                    filepath,
+                    header=None,
+                    names=NSLKDD_COLUMNS
+                )
+                print(f"[simulator] NSL-KDD CSV loaded: {len(self.df)} rows")
+
+            self.current_row = 0
+            return True
+
+        except Exception as e:
+            print(f"[simulator] CSV load error: {e}")
+            return False
     def start(self):
         if self.df is None:
             print("CSV not loaded")
@@ -111,8 +123,8 @@ class CSVSimulator:
                 self.current_row += 1
 
                 # Real model se predict karo
-                attack_type, verdict, color, confidence = \
-                    self.predictor.predict_row(row)
+                attack_type, verdict, color, confidence, if_score = \
+                     self.predictor.predict_row(row)
 
                 ip = random.choice(FAKE_IPS)
                 ts = datetime.now().strftime("%H:%M:%S")
@@ -123,8 +135,9 @@ class CSVSimulator:
                         attack_type,
                         verdict,
                         color,
-                        confidence
-                    )
+                        confidence,
+                        if_score
+                   )
 
             except Exception as e:
                 print(f"Row error: {e}")
