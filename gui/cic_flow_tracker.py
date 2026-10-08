@@ -245,9 +245,9 @@ class CICFlow:
             'Bwd Packets/s':
                 self.bwd_pkt_count / dur_sec
                 if dur_sec > 0 else 0,
-            'Packet Length Min':
+            'Min Packet Length':
                 pkt_len_min,
-            'Packet Length Max':
+            'Max Packet Length':
                 pkt_len_max,
             'Packet Length Mean':
                 pkt_len_mean,
@@ -332,11 +332,11 @@ class CICFlowTracker:
     Live network traffic se CIC-style flows track karo
     """
 
-    FLOW_TIMEOUT = 60  # seconds
-
-    def __init__(self, callback=None):
+    def __init__(self, callback=None, flow_timeout=5, min_packets=1):
         self.flows    = {}
         self.callback = callback
+        self.flow_timeout = flow_timeout   # was: hardcoded FLOW_TIMEOUT = 60
+        self.min_packets  = min_packets
         self._lock    = threading.Lock()
 
         # Cleanup thread
@@ -409,7 +409,7 @@ class CICFlowTracker:
         # Minimum packets filter
         total_pkts = flow.fwd_pkt_count + \
                      flow.bwd_pkt_count
-        if total_pkts < 2:
+        if total_pkts < self.min_packets:
             return
 
         features = flow.get_features()
@@ -420,14 +420,14 @@ class CICFlowTracker:
     def _cleanup_loop(self):
         """Timeout flows cleanup karo"""
         while True:
-            time.sleep(10)
+            time.sleep(2)
             now = time.time()
 
             with self._lock:
                 timeout_keys = [
                     k for k, v in self.flows.items()
                     if now - v.last_time >
-                    self.FLOW_TIMEOUT
+                    self.flow_timeout
                 ]
                 for key in timeout_keys:
                     self._complete_flow(key)

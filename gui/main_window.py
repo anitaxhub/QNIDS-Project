@@ -26,11 +26,7 @@ from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QObject
 from PyQt5.QtGui import QColor, QFont
 
 from capture_to_gui import PacketCapture
-from alert_system import (
-    play_attack_sound,
-    play_unknown_sound,
-    UnknownThreatPopup
-)
+from threat_panel import ThreatSidePanel
 from chart_widget import AttackPieChart
 
 
@@ -362,17 +358,16 @@ class QNIDSMainWindow(QMainWindow):
             from PyQt5.QtGui import QIcon
             self.setWindowIcon(QIcon(icon_path))
 
-        self.setMinimumSize(1200, 720)
+        self.setMinimumSize(1500, 780)
         self.setStyleSheet(f"background-color: {BG}; color: {TEXT};")
 
-        # State
+                # State
         self.is_paused    = False
         self.is_demo_mode = False
         self.row_count    = 0
         self.attack_count = 0
         self.packet_count = 0
-        self._last_unknown_time = 0
-        self._popup_open        = False
+        self._last_sound_time = 0   # throttles beeping during attack bursts
 
         # Thread-safe signal
         self._sig = _Signaller()
@@ -381,6 +376,9 @@ class QNIDSMainWindow(QMainWindow):
         # Capture + simulator
         self.capturer  = PacketCapture(callback=self._on_packet)
         self.simulator = CSVSimulator(callback=self._on_packet)
+
+        # Persistent threat panel (replaces per-event popups)
+        self.threat_panel = ThreatSidePanel()
 
         # Build UI
         central = QWidget()
@@ -398,10 +396,15 @@ class QNIDSMainWindow(QMainWindow):
         mid.addWidget(self._make_sidebar())
         mid.addWidget(self._make_content(), stretch=1)
         mid.addWidget(self._make_right_panel())
+
+        self.threat_panel.setFixedWidth(320)
+        self.threat_panel.setStyleSheet(f"background: {PANEL}; border-left: 1px solid {BORDER};")
+        mid.addWidget(self.threat_panel)
+
         root.addWidget(mid_widget, stretch=1)
 
         root.addWidget(self._make_statusbar())
-
+        
         # Timers
         self.feed_timer  = QTimer()
         self.feed_timer.timeout.connect(self._auto_add_row)
@@ -947,9 +950,20 @@ class QNIDSMainWindow(QMainWindow):
     # RIGHT PANEL
     # ══════════════════════════════════════
     def _make_right_panel(self):
+        outer = QFrame()
+        outer.setFixedWidth(265)
+        outer.setStyleSheet(f"QFrame {{ background-color: {PANEL}; border-left: 1px solid {BORDER}; }}")
+        outer_lay = QVBoxLayout(outer)
+        outer_lay.setContentsMargins(0, 0, 0, 0)
+
+        from PyQt5.QtWidgets import QScrollArea
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+
         rp = QFrame()
-        rp.setFixedWidth(265)
-        rp.setStyleSheet(f"QFrame {{ background: {PANEL}; border-left: 1px solid {BORDER}; }}")
+        rp.setStyleSheet(f"QFrame {{ background-color: {PANEL}; }}")
         lay = QVBoxLayout(rp)
         lay.setContentsMargins(12, 14, 12, 14)
         lay.setSpacing(12)
@@ -980,13 +994,11 @@ class QNIDSMainWindow(QMainWindow):
             rl.addWidget(ac)
             lay.addWidget(row)
 
-        lay.addWidget(sec("ATTACK DISTRIBUTION"))
         self.pie_chart = AttackPieChart()
-        self.pie_chart.setFixedHeight(320)
+        self.pie_chart.setMinimumHeight(560)
         self.pie_chart.setStyleSheet(f"background: {PANEL}; border: 1px solid {BORDER}; border-radius: 10px;")
         lay.addWidget(self.pie_chart)
 
-        lay.addStretch()
         lay.addWidget(sec("EXPORT"))
 
         pdf_btn = QPushButton("↓  Export PDF")
@@ -1007,8 +1019,12 @@ class QNIDSMainWindow(QMainWindow):
 
         lay.addWidget(pdf_btn)
         lay.addWidget(csv_btn)
-        return rp
+        lay.addStretch()
 
+        scroll.setWidget(rp)
+        outer_lay.addWidget(scroll)
+        return outer
+    
     # ══════════════════════════════════════
     # EXPORT
     # ══════════════════════════════════════
@@ -1088,12 +1104,7 @@ class QNIDSMainWindow(QMainWindow):
     def _on_packet(self, ts, ip, info, verdict, color, conf, if_score=0.0):
         if self.is_paused:
             return
-        self.packet_count += 1
-        display = (f"{self.packet_count/1000:.1f}K"
-               if self.packet_count >= 1000
-               else str(self.packet_count))
-        self.card_packets.update_value(display)
-        self.pkt_lbl.setText(f"Packets: {display}")
+       
         self._sig.packet_received.emit(ts, ip, info, verdict, color, conf, if_score)
 
     # ══════════════════════════════════════
@@ -1101,6 +1112,12 @@ class QNIDSMainWindow(QMainWindow):
     # ══════════════════════════════════════
     def add_row(self, timestamp, ip, attack_type,
             verdict, verdict_color, confidence, if_score=0.0):
+      self.packet_count += 1
+      display = (f"{self.packet_count/1000:.1f}K"
+             if self.packet_count >= 1000
+             else str(self.packet_count))
+      self.card_packets.update_value(display)
+      self.pkt_lbl.setText(f"Packets: {display}")
       self.table.insertRow(0)
 
     # Col 0 — Time
@@ -1193,49 +1210,35 @@ class QNIDSMainWindow(QMainWindow):
       self.event_count_lbl.setText(f"{self.row_count} events")
       self._trigger_alert(attack_type, verdict, verdict_color,
                         confidence, timestamp, ip)
-      self.pie_chart.update_counts(attack_type, verdict)
+      self.pie_chart.update_counts(attack_type, verdict, confidence, if_score)
 
     def _trigger_alert(self, attack_type, verdict, color,
-                   confidence, ts, ip, if_score=0.0):
-     import time
-     if "NORMAL" in verdict:
-        return
+                        confidence, ts, ip, if_score=0.0):
+        import time
+        if "NORMAL" in verdict:
+            return
 
-     decision = ("KNOWN_ATTACK" if "ATTACK" in verdict
-                else "SUSPICIOUS")
+        decision = "KNOWN_ATTACK" if "ATTACK" in verdict else "SUSPICIOUS"
 
-     if "UNKNOWN" in verdict or "ATTACK" in verdict:
+        # Every suspicious/attack event gets logged to the panel —
+        # non-blocking, so a burst of 50 flows just adds 50 list rows.
+        self.threat_panel.add_threat(
+            attack_info=attack_type, ip=ip, ts=ts,
+            confidence=confidence, protocol="TCP",
+            if_score=if_score, decision=decision
+        )
+
+        # Throttle only the beep (not the logging), so a flood doesn't
+        # turn into a continuous siren.
         now = time.time()
-        if not self._popup_open and \
-           (now - self._last_unknown_time) > 30:
-            self._last_unknown_time = now
-            self._popup_open        = True
-            if "UNKNOWN" in verdict:
-                play_unknown_sound()
-            else:
+        if now - self._last_sound_time > 2:
+            self._last_sound_time = now
+            if decision == "KNOWN_ATTACK":
+                from threat_panel import play_attack_sound
                 play_attack_sound()
-            self._show_unknown_popup(
-                attack_type, ip, ts,
-                confidence, if_score, decision
-            )
-        elif "ATTACK" in verdict and confidence >= 85:
-            play_attack_sound()
-
-    def _show_unknown_popup(self, attack_info, ip, ts,
-                        confidence=0, if_score=0.0,
-                        decision="SUSPICIOUS"):
-     popup = UnknownThreatPopup(
-        parent=self, attack_info=attack_info,
-        ip=ip, ts=ts, confidence=confidence,
-        protocol="TCP", if_score=if_score,
-        decision=decision
-                         )
-     popup.finished.connect(lambda: setattr(self, '_popup_open', False))
-     popup.move(
-            self.x() + (self.width()  - popup.width())  // 2,
-            self.y() + (self.height() - popup.height()) // 2
-         )
-     popup.show()
+            else:
+                from threat_panel import play_unknown_sound
+                play_unknown_sound()
 
     def _auto_add_row(self):
         if self.is_paused:
@@ -1249,8 +1252,12 @@ class QNIDSMainWindow(QMainWindow):
         self.table.setRowCount(0)
         self.row_count    = 0
         self.attack_count = 0
+        self.packet_count = 0
+        self.pkt_lbl.setText("Packets: 0")
+        self.card_packets.update_value("0")
         self.event_count_lbl.setText("0 events")
         self.card_attacks.update_value("0")
+        self.pie_chart.reset()
 
     # ══════════════════════════════════════
     # TIMERS + CONTROLS
